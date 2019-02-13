@@ -44,14 +44,13 @@ window.onload = function() {
 
     function makeEdges(nodes, edges) {
 
-        //console.log("makeEdges");
-
         for (let key in nodes) {
             let node = nodes[key];
 
             //console.log("Node: " + node.hash);
 
-            let adj = [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0]];
+            //let adj = [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0]];
+            let adj = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 
             for (let pair of adj) {
                 let ox = pair[0];
@@ -112,12 +111,38 @@ window.onload = function() {
         requestAnimationFrame(() => render_loop(nodes, spanEdges, ctx));
     }
 
-    function startKruskal(nodes, edges, spanEdges) {
+    function startKruskal(nodes, edges, uf, spanEdges) {
+
         // convert edge dict to list
+        let _edges = [];
+        for (let key in edges) _edges.push(edges[key]);
+
         // sort list
+        _edges.sort((a, b) => a.weight - b.weight);
+
         // take min edge
-        // make use of UnionFind
-        // add edges to spanEdges when ready to render
+        let nextEdge = function() {
+
+            let cur = _edges.shift();
+            let a   = cur.n1.hash;
+            let b   = cur.n2.hash;
+
+            // If components are not connected...
+            if (uf.find(a) != uf.find(b)) {
+
+                // ...add edges to spanEdges for use in rendering loop
+                uf.union(a, b);
+                spanEdges[cur.hash] = cur;
+
+                if (_edges.length > 0) setTimeout(nextEdge, 100);
+
+            } else {
+                // fire next line immediatly if none line was drawn during this call
+                if (_edges.length > 0) setTimeout(nextEdge, 0);
+
+            }
+        }
+        nextEdge();
     }
 
     function main() {
@@ -135,7 +160,8 @@ window.onload = function() {
         makeEdges(nodes, edges);
 
         let spanEdges = {};
-        startKruskal(nodes, edges, spanEdges);
+        let uf = new UnionFind(nodes);
+        startKruskal(nodes, edges, uf, spanEdges);
 
         // enter render loop
         requestAnimationFrame(() => render_loop(nodes, spanEdges, ctx));

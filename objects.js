@@ -29,7 +29,7 @@ class Edge {
         this.hash = uid_hash; // uid for this edge
         this.timestamp; // the time the edge began rendering
         this.rendertime = 1000; // number of ms the edge takes to finish rendering
-        this.color = "#030";
+        this.color = "#0A0";
         this.done = false; // true when finished rendering
     }
     render(ctx) {
@@ -67,10 +67,8 @@ class Edge {
 class UnionFind {
     constructor(nodes) { // nodes is a dictionary of nodes
         this.lst = {};
-        for (let key in nodes) {
-            // key is the nodes hash, originally
-            // each node points to itself
-            this.lst[key] = key;
+        for (let key in nodes) {            
+            this.lst[key] = key; // originally each node points to itself
         }
     }
     find(a) { // return the group for the given element
@@ -80,10 +78,12 @@ class UnionFind {
             prev = cur;
             cur = this.lst[cur];
         }
-        this.lst[a] = cur; // O(alpha) ?
+        this.lst[a] = cur;
         return cur;
     }
     union(a, b) { // join the two groups (a points to b)
-        this.lst[a] = b;
+        let ah = this.find(a);
+        let bh = this.find(b);
+        this.lst[ah] = bh;
     }
 }
