@@ -11,7 +11,7 @@ class Node {
         this.edges = [];      // list of refs to adj nodes
         this.hash = uid_hash; // uid for this node row-col
         this.radius = 5;
-        this.color = "#0A0";
+        this.color = "#00AA00";
     }
     render(ctx) {
         ctx.fillStyle = this.color;
@@ -22,14 +22,14 @@ class Node {
 }
 
 class Edge {
-    constructor(n1, n2, uid_hash) {
+    constructor(n1, n2, uid_hash, color) {
         this.n1 = n1;
         this.n2 = n2;
         this.weight = Math.random();
         this.hash = uid_hash; // uid for this edge
         this.timestamp; // the time the edge began rendering
         this.rendertime = 1000; // number of ms the edge takes to finish rendering
-        this.color = "#0A0";
+        this.color = color;
         this.done = false; // true when finished rendering
     }
     render(ctx) {
@@ -40,6 +40,7 @@ class Edge {
             this.done = true;
 
             ctx.strokeStyle = this.color;
+            ctx.beginPath();
             ctx.moveTo(this.n1.pos.x, this.n1.pos.y);
             ctx.lineTo(this.n2.pos.x, this.n2.pos.y);
             ctx.stroke();
@@ -56,8 +57,9 @@ class Edge {
 
         let cur_x = current_length * Math.cos(angle) + this.n1.pos.x;
         let cur_y = current_length * Math.sin(angle) + this.n1.pos.y;
-
+        
         ctx.strokeStyle = this.color;
+        ctx.beginPath();
         ctx.moveTo(this.n1.pos.x, this.n1.pos.y);
         ctx.lineTo(cur_x, cur_y);
         ctx.stroke();
@@ -67,7 +69,7 @@ class Edge {
 class UnionFind {
     constructor(nodes) { // nodes is a dictionary of nodes
         this.lst = {};
-        for (let key in nodes) {            
+        for (let key in nodes) {
             this.lst[key] = key; // originally each node points to itself
         }
     }
@@ -85,5 +87,18 @@ class UnionFind {
         let ah = this.find(a);
         let bh = this.find(b);
         this.lst[ah] = bh;
+    }
+}
+
+class PriorityQueue {
+    constructor() {
+        this.lst = []; // list of [distance, node_ref, connecting_edge_ref]
+    }
+    push(edge) {
+        this.lst.push(edge);
+        this.lst.sort((a, b) => a[0] - b[0]);
+    }
+    pop() {
+        return this.lst.shift();
     }
 }

@@ -42,15 +42,12 @@ window.onload = function() {
         }
     }
 
-    function makeEdges(nodes, edges) {
+    function makeEdges(nodes, edges, diag = false) {
 
         for (let key in nodes) {
             let node = nodes[key];
 
-            //console.log("Node: " + node.hash);
-
-            //let adj = [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0]];
-            let adj = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+            let adj = [[0, -1], [1, 0], [0, 1], [-1, 0], [-1, -1], [1, -1], [1, 1], [-1, 1]];
 
             for (let pair of adj) {
                 let ox = pair[0];
@@ -70,11 +67,23 @@ window.onload = function() {
 
                     // only create the edge if it does not already exist
                     if (!(edge_hash in edges)) {
-                        let edge = new Edge(node, other, edge_hash);
-                        edges[edge_hash] = edge;
 
-                        node.edges.push(other);
-                        other.edges.push(node);
+                        let diag = (Math.abs(ox) + Math.abs(oy)) == 2;
+
+                        if (diag) {
+
+                            // store for use with prims
+                            let edge = new Edge(node, other, edge_hash, "#AA0000");
+                            node.edges.push(edge);
+                            other.edges.push(edge);
+
+                        } else {
+
+                            // store for use with kruskal
+                            let edge = new Edge(node, other, edge_hash, "#0000AA");
+                            edges[edge_hash] = edge;
+
+                        }
                     }
                 }
             }
@@ -101,17 +110,18 @@ window.onload = function() {
         ctx.fillRect(0, 0, W, H);
     }
 
-    function render_loop(nodes, spanEdges, ctx) {
+    function render_loop(nodes, kruskalEdges, primsEdges, ctx) {
 
         clear(ctx);
 
-        render(spanEdges, ctx);
+        render(kruskalEdges, ctx);
+        render(primsEdges, ctx);
         render(nodes, ctx);
 
-        requestAnimationFrame(() => render_loop(nodes, spanEdges, ctx));
+        requestAnimationFrame(() => render_loop(nodes, kruskalEdges, primsEdges, ctx));
     }
 
-    function startKruskal(nodes, edges, uf, spanEdges) {
+    function startKruskal(edges, uf, kruskalEdges) {
 
         // convert edge dict to list
         let _edges = [];
@@ -130,9 +140,9 @@ window.onload = function() {
             // If components are not connected...
             if (uf.find(a) != uf.find(b)) {
 
-                // ...add edges to spanEdges for use in rendering loop
+                // ...add edges to kruskalEdges for use in rendering loop
                 uf.union(a, b);
-                spanEdges[cur.hash] = cur;
+                kruskalEdges[cur.hash] = cur;
 
                 if (_edges.length > 0) setTimeout(nextEdge, 100);
 
@@ -143,6 +153,58 @@ window.onload = function() {
             }
         }
         nextEdge();
+    }
+
+    function otherNode(node, edge) {
+        if (edge.n1.hash == node.hash) {
+            return edge.n2;
+        } else {
+            return edge.n1;
+        }
+    }
+
+    function startPrims(startNode, pq, primsEdges) {
+
+        let seen = {};
+        pq.push([0, startNode, undefined]);
+
+        let nextNode = function() {
+
+            let cur = pq.pop();
+            // let dist = cur[0]; // only used for sorting
+            let node = cur[1];
+            let connecting_edge = cur[2];
+
+            if (node.hash in seen) {
+                if (pq.lst.length > 0) setTimeout(nextNode, 0);
+                return;
+            }
+
+            seen[node.hash] = true;
+
+            if (connecting_edge != undefined) {
+                primsEdges[connecting_edge.hash] = connecting_edge;
+            }
+
+            for (let edge of node.edges) {
+                let other = otherNode(node, edge);
+
+                if (!(other.hash in seen)) {
+                    pq.push([edge.weight, other, edge]);
+                }
+            }
+
+            if (pq.lst.length > 0) setTimeout(nextNode, 100);
+        };
+        nextNode();
+    }
+
+    function getStartNode(nodes) {
+        // returns a random node with which to start prims
+        let x = Math.floor(Math.random() * COLS);
+        let y = Math.floor(Math.random() * ROWS);
+        let uid_hash = hash(x, y);
+        return nodes[uid_hash];
     }
 
     function main() {
@@ -159,12 +221,17 @@ window.onload = function() {
         let edges = {};
         makeEdges(nodes, edges);
 
-        let spanEdges = {};
+        let kruskalEdges = {};
         let uf = new UnionFind(nodes);
-        startKruskal(nodes, edges, uf, spanEdges);
+        startKruskal(edges, uf, kruskalEdges);
+
+        let primsEdges = {};
+        let pq = new PriorityQueue();
+        let startNode = getStartNode(nodes);
+        startPrims(startNode, pq, primsEdges);
 
         // enter render loop
-        requestAnimationFrame(() => render_loop(nodes, spanEdges, ctx));
+        requestAnimationFrame(() => render_loop(nodes, kruskalEdges, primsEdges, ctx));
 
     }
     main();
